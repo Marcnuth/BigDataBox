@@ -1,0 +1,90 @@
+version: "3"
+
+services:
+  #oozie-server:
+  #  build:
+  #    context: ./oozie
+  #    dockerfile: dockerfile
+  #  container_name: oozie-server
+  #  restart: always
+  #  ports:
+  #    - 11000:11000
+  #  depends_on:
+  #    - namenode
+
+  namenode:
+    build:
+      context: ./hadoop
+      dockerfile: namenode.dockerfile
+    container_name: namenode
+    restart: always
+    ports:
+      - 9870:9870
+      - 9000:9000
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+    environment:
+      - CLUSTER_NAME=test
+    env_file:
+      - ./hadoop/hadoop.env
+
+  datanode:
+    build:
+      context: ./hadoop
+      dockerfile: datanode.dockerfile
+    container_name: datanode
+    restart: always
+    volumes:
+      - hadoop_datanode:/hadoop/dfs/data
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+    env_file:
+      - ./hadoop/hadoop.env
+    depends_on:
+      - namenode
+  
+  resourcemanager:
+    build:
+      context: ./hadoop
+      dockerfile: resourcemanager.dockerfile
+    container_name: resourcemanager
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864"
+    env_file:
+      - ./hadoop/hadoop.env
+    depends_on:
+      - datanode
+
+  nodemanager1:
+    build:
+      context: ./hadoop
+      dockerfile: nodemanager.dockerfile
+    container_name: nodemanager
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+    env_file:
+      - ./hadoop/hadoop.env
+    depends_on:
+      - resourcemanager
+  
+  historyserver:
+    build:
+      context: ./hadoop
+      dockerfile: historyserver.dockerfile
+    container_name: historyserver
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+    volumes:
+      - hadoop_historyserver:/hadoop/yarn/timeline
+    env_file:
+      - ./hadoop/hadoop.env
+    depends_on:
+      - resourcemanager
+  
+volumes:
+  hadoop_namenode:
+  hadoop_datanode:
+  hadoop_historyserver:

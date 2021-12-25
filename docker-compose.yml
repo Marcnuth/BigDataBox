@@ -1,0 +1,55 @@
+version: "3"
+
+services:
+
+  namenode:
+    build:
+      context: ./oozie
+      dockerfile: namenode.dockerfile
+    container_name: namenode
+    command: namenode --format
+    restart: always
+    ports:
+      - 50070:50070
+      - 11000:11000
+
+  namenode2:
+    build:
+      context: ./oozie
+      dockerfile: namenode.dockerfile
+    container_name: namenode2
+    command: namenodesecondary --fs-host namenode
+    restart: always
+    depends_on:
+      - namenode
+
+  resourcemanager:
+    build:
+      context: ./oozie
+      dockerfile: resource_manager.dockerfile
+    container_name: resourcemanager
+    command: resourcemanager
+    restart: always
+    depends_on:
+      - namenode2
+
+  worker1:
+    build:
+      context: ./oozie
+      dockerfile: datanode.dockerfile
+    container_name: worker1 
+    command: all --calculate-tokens 1:2 --dc cass-1 --name-node namenode --resource-manager resourcemanager --node-containers-heap-total 1024
+    restart: always
+    depends_on:
+      - resourcemanager
+
+  worker2:
+    build:
+      context: ./oozie
+      dockerfile: datanode.dockerfile
+    container_name: worker2
+    command: all --calculate-tokens 2:2 --dc cass-1 --name-node namenode --resource-manager resourcemanager --node-containers-heap-total 1024
+    restart: always
+    depends_on:
+      - worker1
+  
